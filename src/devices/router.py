@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .models import Collar
+from users.models import User
 from .schemas import CollarBase
 from database import get_db
 
@@ -53,3 +54,28 @@ def recover_collar(reg_number: int, db: Session = Depends(get_db)):
         return {"message": "successfully recovered!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Error")  # Добавить исключение отсутствия ошейника
+
+
+@device_router.post("/link_collar")  # Привязка пёсика к волонтёру
+def link_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
+    try:
+        user = db.query(User).filter(User.id == uid).first()  # Необходимо, чтобы убедиться в том что пользователь
+        # с таким id существует
+        collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        collar.user_id = uid
+        db.commit()
+        return {"message": "successfully linked!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Error")
+
+
+@device_router.post("/unlink_collar")
+def unlink_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
+    try:
+        user = db.query(User).filter(User.id == uid).first()
+        collar = db.query(Collar).filter(Collar.registration_number == reg_number and Collar.user_id == uid).first()
+        collar.user_id = 0
+        db.commit()
+        return {"message": "successfully unlinked!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Error")

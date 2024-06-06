@@ -7,3 +7,4 @@ class Collar(Base):
     registration_number = Column(Integer, primary_key=True)
     nickname = Column(String)
     is_deleted = Column(Integer)
+    user_id = Column(Integer)
