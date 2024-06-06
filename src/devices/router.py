@@ -22,3 +22,14 @@ def add_collar(collar: CollarBase, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Collar already registered")
         else:
             raise HTTPException(status_code=500, detail="Internal Error")
+
+
+@device_router.get("/get_collars")
+def get_collars(db: Session = Depends(get_db)):
+    try:
+        collars = db.query(Collar).all()  # all для всех записей
+        return collars
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Error")
+
+
