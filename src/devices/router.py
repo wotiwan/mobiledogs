@@ -7,7 +7,7 @@ from database import get_db
 device_router = APIRouter()
 
 
-@device_router.post("/add_collar")
+@device_router.post("/add_collar")  # Добавить
 def add_collar(collar: CollarBase, db: Session = Depends(get_db)):
     try:
         db.begin_nested()
@@ -27,9 +27,29 @@ def add_collar(collar: CollarBase, db: Session = Depends(get_db)):
 @device_router.get("/get_collars")
 def get_collars(db: Session = Depends(get_db)):
     try:
-        collars = db.query(Collar).all()  # all для всех записей
+        collars = db.query(Collar).filter(Collar.is_deleted == 0).all()  # all для всех записей
         return collars
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Error")
 
 
+@device_router.post("/delete_collar")
+def delete_collar(reg_number: int, db: Session = Depends(get_db)):
+    try:
+        collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        collar.is_deleted = 1
+        db.commit()
+        return {"message": "successfully deleted!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Error")  # Добавить исключение отсутствия ошейника
+
+
+@device_router.post("/recover_collar")
+def recover_collar(reg_number: int, db: Session = Depends(get_db)):
+    try:
+        collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        collar.is_deleted = 0
+        db.commit()
+        return {"message": "successfully recovered!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Error")  # Добавить исключение отсутствия ошейника
