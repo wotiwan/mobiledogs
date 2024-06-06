@@ -1,4 +1,6 @@
-fastapi
+fastapi~=0.111.0
 uvicorn
-pydentic
-sqlalchemy
+sqlalchemy~=2.0.30
+pydantic~=2.7.3
+mysql-connector-python
+requests
