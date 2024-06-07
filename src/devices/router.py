@@ -84,6 +84,9 @@ def unlink_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
 @device_router.post("/send_coordinates")
 def send_coordinates(coordinate: CoordinateBase, db: Session = Depends(get_db)):
     try:
+        collar = db.query(Collar).filter(Collar.registration_number == coordinate.collar_id).first()
+        if not collar:
+            raise HTTPException(status_code=400, detail="Collar is not existing")
 
         db_coordinate = Coordinate(
             collar_id=coordinate.collar_id,
@@ -97,17 +100,28 @@ def send_coordinates(coordinate: CoordinateBase, db: Session = Depends(get_db)):
         return {"status": "success", "coordinate_id": db_coordinate.id}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Internal Error")
+        if "Incorrect datetime value" in str(e):
+            raise HTTPException(status_code=400, detail="Incorrect DATETIME")
+        raise HTTPException(status_code=500, detail=f"{e}")
 
 
 @device_router.get("/get_track")
 def get_track(collar_id: int, start_time: str, end_time: str, db: Session = Depends(get_db)):
     try:
+        collar = db.query(Collar).filter(Collar.registration_number == collar_id).first()
+        if not collar:
+            raise HTTPException(status_code=400, detail="Collar is not existing")
+
         track = db.query(Coordinate).filter(
             Coordinate.collar_id == collar_id,
             Coordinate.timestamp >= start_time,
             Coordinate.timestamp <= end_time
         ).all()
+        if not track:
+            raise HTTPException(status_code=400, detail="No track info for this time range")
+
         return track
     except Exception as e:
+        if "Incorrect DATETIME" in str(e):
+            raise HTTPException(status_code=400, detail="Incorrect DATETIME")
         raise HTTPException(status_code=500, detail="Internal Error")
