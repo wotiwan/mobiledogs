@@ -12,6 +12,13 @@ device_router = APIRouter()
 def add_collar(collar: CollarBase, db: Session = Depends(get_db)):
     try:
         db.begin_nested()
+        existing_collar = db.query(Collar).filter(Collar.registration_number == collar.reg_number).first()
+        if existing_collar:
+            if existing_collar.is_deleted == 1:
+                raise HTTPException(status_code=400,
+                                    detail="Collar was deleted, please, recover it")
+            else:
+                raise HTTPException(status_code=400, detail="Collar already registered")
         db_collar = Collar(registration_number=collar.reg_number, nickname=collar.nickname)
         db.add(db_collar)
         db.commit()
@@ -19,8 +26,8 @@ def add_collar(collar: CollarBase, db: Session = Depends(get_db)):
         return {"reg_number": db_collar.registration_number, "nickname": db_collar.nickname}
     except Exception as e:
         db.rollback()
-        if "collars.PRIMARY" in str(e) and "Duplicate" in str(e):
-            raise HTTPException(status_code=400, detail="Collar already registered")
+        if "Collar was deleted" in str(e) or "already registered" in str(e):
+            raise HTTPException(status_code=400, detail=f"{e}")
         else:
             raise HTTPException(status_code=500, detail="Internal Error")
 
@@ -29,8 +36,12 @@ def add_collar(collar: CollarBase, db: Session = Depends(get_db)):
 def get_collars(db: Session = Depends(get_db)):
     try:
         collars = db.query(Collar).filter(Collar.is_deleted == 0).all()  # all для всех записей
+        if not collars:
+            raise HTTPException(status_code=404, detail="No data yet")
         return collars
     except Exception as e:
+        if "No data yet" in str(e):
+            raise HTTPException(status_code=404, detail=f"{e}")
         raise HTTPException(status_code=500, detail="Internal Error")
 
 
@@ -38,22 +49,32 @@ def get_collars(db: Session = Depends(get_db)):
 def delete_collar(reg_number: int, db: Session = Depends(get_db)):
     try:
         collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        if not collar:
+            raise HTTPException(status_code=404, detail="Collar is not existing")
         collar.is_deleted = 1
         db.commit()
         return {"message": "successfully deleted!"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal Error")  # Добавить исключение отсутствия ошейника
+        if "Collar is not" in str(e):
+            raise HTTPException(status_code=404, detail=f"{e}")
+        raise HTTPException(status_code=500, detail="Internal Error")
 
 
 @device_router.post("/recover_collar")
 def recover_collar(reg_number: int, db: Session = Depends(get_db)):
     try:
         collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        if collar.is_deleted == 0:
+            raise HTTPException(status_code=400, detail="Collar is not deleted")
+        if not collar:
+            raise HTTPException(status_code=404, detail="Collar is not existing")
         collar.is_deleted = 0
         db.commit()
         return {"message": "successfully recovered!"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal Error")  # Добавить исключение отсутствия ошейника
+        if "Collar is not" in str(e):
+            raise HTTPException(status_code=404, detail=f"{e}")
+        raise HTTPException(status_code=500, detail="Internal Error")
 
 
 @device_router.post("/link_collar")  # Привязка пёсика к волонтёру
@@ -61,11 +82,17 @@ def link_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
     try:
         user = db.query(User).filter(User.id == uid).first()  # Необходимо, чтобы убедиться в том что пользователь
         # с таким id существует
+        if not user:
+            raise HTTPException(status_code=404, detail="User is not existing")
         collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        if not collar:
+            raise HTTPException(status_code=404, detail="Collar is not existing")
         collar.user_id = uid
         db.commit()
         return {"message": "successfully linked!"}
     except Exception as e:
+        if "User is" in str(e) or "Collar is" in str(e):
+            raise HTTPException(status_code=404, detail=f"{e}")
         raise HTTPException(status_code=500, detail="Internal Error")
 
 
@@ -73,11 +100,17 @@ def link_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
 def unlink_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
     try:
         user = db.query(User).filter(User.id == uid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User is not existing")
         collar = db.query(Collar).filter(Collar.registration_number == reg_number and Collar.user_id == uid).first()
+        if not collar:
+            raise HTTPException(status_code=404, detail="Collar is not existing")
         collar.user_id = 0
         db.commit()
         return {"message": "successfully unlinked!"}
     except Exception as e:
+        if "User is" in str(e) or "Collar is" in str(e):
+            raise HTTPException(status_code=404, detail=f"{e}")
         raise HTTPException(status_code=500, detail="Internal Error")
 
 
@@ -102,7 +135,9 @@ def send_coordinates(coordinate: CoordinateBase, db: Session = Depends(get_db)):
         db.rollback()
         if "Incorrect datetime value" in str(e):
             raise HTTPException(status_code=400, detail="Incorrect DATETIME")
-        raise HTTPException(status_code=500, detail=f"{e}")
+        elif "Collar is" in str(e):
+            raise HTTPException(status_code=400, detail=f"{e}")
+        raise HTTPException(status_code=500, detail=f"Internal Error")
 
 
 @device_router.get("/get_track")
@@ -110,7 +145,7 @@ def get_track(collar_id: int, start_time: str, end_time: str, db: Session = Depe
     try:
         collar = db.query(Collar).filter(Collar.registration_number == collar_id).first()
         if not collar:
-            raise HTTPException(status_code=400, detail="Collar is not existing")
+            raise HTTPException(status_code=404, detail="Collar is not existing")
 
         track = db.query(Coordinate).filter(
             Coordinate.collar_id == collar_id,
@@ -124,4 +159,7 @@ def get_track(collar_id: int, start_time: str, end_time: str, db: Session = Depe
     except Exception as e:
         if "Incorrect DATETIME" in str(e):
             raise HTTPException(status_code=400, detail="Incorrect DATETIME")
-        raise HTTPException(status_code=500, detail="Internal Error")
+        elif "Collar is" in str(e) or "No track" in str(e):
+            raise HTTPException(status_code=400, detail=f"{e}")
+        else:
+            raise HTTPException(status_code=500, detail="Internal Error")
