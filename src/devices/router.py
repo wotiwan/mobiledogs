@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from .models import Collar
+from .models import Collar, Coordinate
 from users.models import User
-from .schemas import CollarBase
+from .schemas import CollarBase, CoordinateBase
 from database import get_db
 
 device_router = APIRouter()
@@ -77,5 +77,37 @@ def unlink_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
         collar.user_id = 0
         db.commit()
         return {"message": "successfully unlinked!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Error")
+
+
+@device_router.post("/send_coordinates")
+def send_coordinates(coordinate: CoordinateBase, db: Session = Depends(get_db)):
+    try:
+
+        db_coordinate = Coordinate(
+            collar_id=coordinate.collar_id,
+            latitude=coordinate.latitude,
+            longitude=coordinate.longitude,
+            timestamp=coordinate.timestamp
+        )
+        db.add(db_coordinate)
+        db.commit()
+        db.refresh(db_coordinate)
+        return {"status": "success", "coordinate_id": db_coordinate.id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal Error")
+
+
+@device_router.get("/get_track")
+def get_track(collar_id: int, start_time: str, end_time: str, db: Session = Depends(get_db)):
+    try:
+        track = db.query(Coordinate).filter(
+            Coordinate.collar_id == collar_id,
+            Coordinate.timestamp >= start_time,
+            Coordinate.timestamp <= end_time
+        ).all()
+        return track
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Error")
