@@ -100,5 +100,9 @@ MobileDogs_API представляет собой систему монитор
 
 ## Лицензия
 
-Добавьте здесь информацию о лицензии, если это необходимо.
+Этот проект лицензируется по лицензии MIT — подробности см. в файле LICENSE.
+
+## The author of the project
+[shokorev25]([https://github.com/wotiwan])
+[shokorev25]([https://github.com/shokorev25 ])
 
