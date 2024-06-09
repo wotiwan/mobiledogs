@@ -4,3 +4,6 @@ sqlalchemy~=2.0.30
 pydantic~=2.7.3
 mysql-connector-python
 requests
+sphinx
+sphinx-autobuild
+sphinx_rtd_theme
