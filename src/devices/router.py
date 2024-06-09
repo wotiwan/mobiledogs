@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .models import Collar, Coordinate
 from users.models import User
-from .schemas import CollarBase, CoordinateBase
+from users.schemas import UserUpdate
+from .schemas import CollarBase, CoordinateBase, CollarUpdate, GetCoordinate
 from database import get_db
 from logs.devices_logs import logger
 
@@ -51,9 +52,9 @@ def get_collars(db: Session = Depends(get_db)):
 
 
 @device_router.post("/delete_collar")
-def delete_collar(reg_number: int, db: Session = Depends(get_db)):
+def delete_collar(reg_number: CollarUpdate, db: Session = Depends(get_db)):
     try:
-        collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        collar = db.query(Collar).filter(Collar.registration_number == reg_number.reg_number).first()
         if not collar:
             raise HTTPException(status_code=404, detail="Collar is not existing")
         collar.is_deleted = 1
@@ -68,9 +69,9 @@ def delete_collar(reg_number: int, db: Session = Depends(get_db)):
 
 
 @device_router.post("/recover_collar")
-def recover_collar(reg_number: int, db: Session = Depends(get_db)):
+def recover_collar(reg_number: CollarUpdate, db: Session = Depends(get_db)):
     try:
-        collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        collar = db.query(Collar).filter(Collar.registration_number == reg_number.reg_number).first()
         if collar.is_deleted == 0:
             raise HTTPException(status_code=400, detail="Collar is not deleted")
         if not collar:
@@ -87,18 +88,18 @@ def recover_collar(reg_number: int, db: Session = Depends(get_db)):
 
 
 @device_router.post("/link_collar")  # Привязка пёсика к волонтёру
-def link_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
+def link_collar(reg_number: CollarUpdate, uid: UserUpdate, db: Session = Depends(get_db)):
     try:
-        user = db.query(User).filter(User.id == uid).first()  # Необходимо, чтобы убедиться в том что пользователь
+        user = db.query(User).filter(User.id == uid.id).first()  # Необходимо, чтобы убедиться в том что пользователь
         # с таким id существует
         if not user:
             raise HTTPException(status_code=404, detail="User is not existing")
-        collar = db.query(Collar).filter(Collar.registration_number == reg_number).first()
+        collar = db.query(Collar).filter(Collar.registration_number == reg_number.reg_number).first()
         if not collar:
             raise HTTPException(status_code=404, detail="Collar is not existing")
-        collar.user_id = uid
+        collar.user_id = uid.id
         db.commit()
-        logger.info(f"Collar {reg_number} linked to user {uid}")
+        logger.info(f"Collar {reg_number.reg_number} linked to user {uid.id}")
         return {"message": "successfully linked!"}
     except Exception as e:
         logger.error(f"Error linking collar: {e}")
@@ -108,17 +109,18 @@ def link_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
 
 
 @device_router.post("/unlink_collar")
-def unlink_collar(reg_number: int, uid: int, db: Session = Depends(get_db)):
+def unlink_collar(reg_number: CollarUpdate, uid: UserUpdate, db: Session = Depends(get_db)):
     try:
-        user = db.query(User).filter(User.id == uid).first()
+        user = db.query(User).filter(User.id == uid.id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User is not existing")
-        collar = db.query(Collar).filter(Collar.registration_number == reg_number and Collar.user_id == uid).first()
+        collar = db.query(Collar).filter(
+            Collar.registration_number == reg_number.reg_number and Collar.user_id == uid.id).first()
         if not collar:
             raise HTTPException(status_code=404, detail="Collar is not existing")
         collar.user_id = 0
         db.commit()
-        logger.info(f"Collar {reg_number} unlinked from user {uid}")
+        logger.info(f"Collar {reg_number.reg_number} unlinked from user {uid.id}")
         return {"message": "successfully unlinked!"}
     except Exception as e:
         logger.error(f"Error unlinking collar: {e}")
@@ -155,21 +157,21 @@ def send_coordinates(coordinate: CoordinateBase, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Internal Error")
 
 
-@device_router.get("/get_track")
-def get_track(collar_id: int, start_time: str, end_time: str, db: Session = Depends(get_db)):
+@device_router.post("/get_track")
+def get_track(collar: GetCoordinate, db: Session = Depends(get_db)):
     try:
-        collar = db.query(Collar).filter(Collar.registration_number == collar_id).first()
-        if not collar:
+        collar_db = db.query(Collar).filter(Collar.registration_number == collar.collar_id).first()
+        if not collar_db:
             raise HTTPException(status_code=404, detail="Collar is not existing")
 
         track = db.query(Coordinate).filter(
-            Coordinate.collar_id == collar_id,
-            Coordinate.timestamp >= start_time,
-            Coordinate.timestamp <= end_time
+            Coordinate.collar_id == collar.collar_id,
+            Coordinate.timestamp >= collar.start_time,
+            Coordinate.timestamp <= collar.end_time
         ).all()
         if not track:
             raise HTTPException(status_code=400, detail="No track info for this time range")
-        logger.info(f"Track retrieved for collar {collar_id} from {start_time} to {end_time}")
+        logger.info(f"Track retrieved for collar {collar.collar_id} from {collar.start_time} to {collar.end_time}")
         return track
     except Exception as e:
         logger.error(f"Error getting track: {e}")

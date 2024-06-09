@@ -7,5 +7,5 @@ class UserBase(BaseModel):
     password: str
 
 
-#class UserMain(UserBase):
-#    id: int = Field(gt=0)
+class UserUpdate(BaseModel):
+    id: int = Field(gt=0)
