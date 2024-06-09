@@ -4,7 +4,7 @@ from .schemas import UserBase
 from .hash_password import hash_pass
 from .models import User
 from database import get_db
-from logs.users_logs import logger
+from logs.logger import logger
 
 router = APIRouter()
 

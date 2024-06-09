@@ -5,7 +5,7 @@ from users.models import User
 from users.schemas import UserUpdate
 from .schemas import CollarBase, CoordinateBase, CollarUpdate, GetCoordinate
 from database import get_db
-from logs.devices_logs import logger
+from logs.logger import logger
 
 device_router = APIRouter()
 
