@@ -4,7 +4,7 @@ from .schemas import UserBase
 from .hash_password import hash_pass
 from .models import User
 from database import get_db
-
+from logs.users_logs import logger
 
 router = APIRouter()
 
@@ -18,9 +18,11 @@ def create_user(user: UserBase, db: Session = Depends(get_db)):  # функци�
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+        logger.info(f"User created: {db_user.id, db_user.nickname}")
         return {"user_id": db_user.id}
     except Exception as e:
         db.rollback()
+        logger.error(f"Error creating user: {e}")
         if "users.nickname" in str(e) and "Duplicate" in str(e):
             raise HTTPException(status_code=400, detail="Nickname already exists")
         elif "users.email" in str(e) and "Duplicate" in str(e):
