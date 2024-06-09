@@ -1,9 +1,9 @@
 import requests
 import json
 
-url = "http://localhost:8000/add_collar"
+url = "http://localhost:8000/devices/add_collar"
 data = {
-    "reg_number": "582439",
+    "reg_number": "41452",
     "nickname": "Stredlka"
 }
 

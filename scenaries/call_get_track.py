@@ -1,7 +1,7 @@
 import requests
 import json
 
-url = "http://localhost:8000/get_track"
+url = "http://localhost:8000/devices/get_track"
 data = {
   "collar_id": 13256,
   "start_time": "2023-01-01",

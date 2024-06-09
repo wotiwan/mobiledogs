@@ -1,7 +1,7 @@
 import requests
 import json
 
-url = "http://localhost:8000/recover_collar"
+url = "http://localhost:8000/devices/recover_collar"
 data = {
     "reg_number": "13256"
 }

@@ -1,7 +1,7 @@
 import requests
 import json
 
-url = "http://localhost:8000/send_coordinates"
+url = "http://localhost:8000/devices/send_coordinates"
 data = {
   "collar_id": 13256,
   "latitude": 52.29778,

@@ -1,7 +1,7 @@
 import requests
 import json
 
-url = "http://localhost:8000/create_user"
+url = "http://localhost:8000/users/create_user"
 data = {
     "nickname": "saharokbro",
     "email": "pomog-78@yandex.ru",
