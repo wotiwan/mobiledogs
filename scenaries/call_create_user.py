@@ -3,8 +3,8 @@ import json
 
 url = "http://localhost:8000/create_user"
 data = {
-    "nickname": "wotiwan",
-    "email": "iwanpomogaev@yandex.ru",
+    "nickname": "saharokbro",
+    "email": "pomog-78@yandex.ru",
     "password": "12345"
 }
 
